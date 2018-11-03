@@ -1,2 +1,2 @@
 # World-War-K
-I have no idea
+A game which is too great to be expressed in words built upon Ineffable Engine
