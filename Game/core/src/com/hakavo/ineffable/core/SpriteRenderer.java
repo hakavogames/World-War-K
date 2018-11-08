@@ -20,6 +20,7 @@ import com.badlogic.gdx.graphics.g2d.*;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.utils.Pools;
+import java.util.Random;
 
 public class SpriteRenderer extends Renderable implements GameComponent.Copiable
 {
@@ -28,15 +29,18 @@ public class SpriteRenderer extends Renderable implements GameComponent.Copiable
     public Color color=new Color(1,1,1,1);
     private Transform transform;
     
-    public SpriteRenderer(Sprite2D sprite,boolean flipX,boolean flipY)
+    public SpriteRenderer(Sprite2D sprite,boolean flipX,boolean flipY, TextureRegion... textureRegions)
     {
         this.sprite=sprite;
         this.flipX=flipX;
         this.flipY=flipY;
+        Random rnd = Pools.obtain(Random.class);
+        this.sprite.textureRegion.setRegion(textureRegions[rnd.nextInt(textureRegions.length)]);
+        Pools.free(rnd);
     }
-    public SpriteRenderer(Sprite2D sprite)
+    public SpriteRenderer(Sprite2D sprite, TextureRegion... textureRegions)
     {
-        this(sprite,false,false);
+        this(sprite,false,false, textureRegions);
     }
     @Override
     public void start() {

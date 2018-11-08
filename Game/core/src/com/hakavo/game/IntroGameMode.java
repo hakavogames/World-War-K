@@ -12,7 +12,7 @@ import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.utils.Pools;
 import com.badlogic.gdx.utils.Queue;
 
-public class MenuGameMode implements GameMode {
+public class IntroGameMode implements GameMode {
     Engine engine;
     
     @Override
