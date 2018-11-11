@@ -7,6 +7,7 @@ import com.badlogic.gdx.maps.*;
 import com.badlogic.gdx.maps.tiled.*;
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.Vector2;
+import com.hakavo.ineffable.Editor;
 import com.hakavo.ineffable.Engine;
 import java.io.IOException;
 import java.util.logging.Level;

@@ -92,7 +92,8 @@ public class Engine {
                 renderable.onGui(ui);
         
         gameMode.renderGui(ui);
-        GameServices.spriteBatch.end();
+        if(GameServices.spriteBatch.isDrawing())
+            GameServices.spriteBatch.end();
     }
     public void update(float delta)
     {
@@ -101,16 +102,18 @@ public class Engine {
         camera.update();
         GameServices.getSpriteBatch().setProjectionMatrix(camera.combined);
     }
-    private class GameManager extends GameComponent {
+    public class GameManager extends GameComponent {
         private Joint level;
         private Array<GameObject> gameObjects;
         private PointCollider cursor;
+        private Array<Collider> colliders=new Array<Collider>();
         
         @Override
         public void start() {
             cursor=new PointCollider();
             cursor.active=false;
             cursor.name="mouse-pointer";
+            cursor.tags.set(0,-1);
             
             level=(Joint)this.getGameObject();
             level.addComponent(cursor);
@@ -123,8 +126,7 @@ public class Engine {
             cursor.active=Gdx.input.isButtonPressed(Input.Buttons.LEFT);
             
             gameObjects.clear();
-            Array<Collider> colliders=new Array<Collider>();
-            
+            colliders.clear();
             for(GameObject gameObject : level.getAllGameObjects(gameObjects))
                 colliders.addAll(gameObject.getComponents(Collider.class));
             
@@ -132,6 +134,16 @@ public class Engine {
                 for(int i=0;i<colliders.size;i++)
                     if(!colliders.get(i).equals(collider))
                         collider.testCollision(colliders.get(i));
+        }
+        public Array<Collider> testCollision(Collider collider) {
+            Array<Collider> objectsHit=new Array<Collider>();
+            
+            for(Collider t : colliders)
+                if(!t.equals(collider))
+                    if(t.active&&collider.active&&collider.matchTags(t)&&t.collides(collider))
+                        objectsHit.add(t);
+            
+            return objectsHit;
         }
     }
 }

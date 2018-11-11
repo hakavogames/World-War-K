@@ -14,7 +14,7 @@ public class DesktopLauncher {
                 config.useGL30=true;
                 config.foregroundFPS=10000;
                 config.allowSoftwareMode=false;
-                config.samples=16;
+                config.samples=4;
                 config.vSyncEnabled=true;
 		new LwjglApplication(new Game(), config);
 	}

@@ -74,6 +74,7 @@ public class ActualGameMode implements GameMode {
         player.addComponent(new Transform(camera.viewportWidth/2,camera.viewportHeight/2));
         player.addComponent(new SpriteRenderer(sprite));
         player.addComponent(animationController);
+        player.addComponent(new BoxCollider());
         player.addComponent(new PlayerController());
         player.getComponent(SpriteRenderer.class).layer=1;
         
@@ -84,18 +85,18 @@ public class ActualGameMode implements GameMode {
         
         Sprite2D guySprite=new Sprite2D();
         Joint guy=(Joint)player.cpy();
+        guy.name="guy";
         guy.getComponent(SpriteRenderer.class).sprite=guySprite;
         guy.getComponent(SpriteRenderer.class).layer=0;
         guy.getComponent(AnimationController.class).setTarget(guySprite);
         guy.getComponent(AnimationController.class).play("fart");
         guy.getComponent(Transform.class).matrix.setToTranslation(325,225);
-        guy.addComponent(new BoxCollider());
         guy.gameObjects.get(0).getComponent(Transform.class).setRelative(guy.getComponent(Transform.class));
         guy.addComponent(new GameComponent() {
             DialogueSystem dialogue;
             SpriteRenderer spriteRenderer;
             BoxCollider collider;
-            boolean busy=false;
+            boolean busy=false,collide;
             public void start() {
                 collider=this.getGameObject().getComponent(BoxCollider.class);
                 collider.name="guyCollider";
@@ -109,20 +110,23 @@ public class ActualGameMode implements GameMode {
                             {dialogue.setDialogue("greeting");busy=true;}
                     }
                 });
-                dialogue=new DialogueSystem(true,0,0.3f,1f);
-                Dialogue question=new Dialogue("question","Can you help me?",2.5f) {
+                collider.tags.add(-1);
+                dialogue=new DialogueSystem(true,0,0.3f,1f) {
                     @Override
-                    public void onDialogueComplete() {
+                    public void onConversationFinish() {
                         busy=false;
                     }
                 };
+                
+                Dialogue question=new Dialogue("question","Can you help me?",2.5f);
                 question.choices.add(new Choice("Give Tomato Soup","thanks"));
-                question.choices.add(new Choice("Do nothing",""));
+                question.choices.add(new Choice("Do nothing","die"));
                 Dialogue greeting=new Dialogue("greeting","Hello, I've been travelling for 2 weeks.",3f);
                 greeting.choices.add(new Choice("","greeting2"));
                 Dialogue greeting2=new Dialogue("greeting2","I feel I will die if I won't eat anything",3f);
                 greeting2.choices.add(new Choice("","question"));
-                dialogue.dialogues.add(greeting,question,greeting2,new Dialogue("thanks","You saved my life, I won't forget that!",3f));
+                dialogue.dialogues.addAll(greeting,question,greeting2,new Dialogue("thanks","You saved my life, I won't forget that!",3f),
+                                       new Dialogue("die","*drops dead on the floor*",2f));
                 
                 ((Joint)this.getGameObject()).gameObjects.get(0).addComponent(dialogue);
             }
@@ -135,24 +139,58 @@ public class ActualGameMode implements GameMode {
         
         engine.getLevel().addGameObject(player);
         engine.getLevel().addGameObject(guy);
+        
+        Map map=new Map(new Tileset(Gdx.files.internal("tilesets/wwii/tileset.xml")),Gdx.files.internal("maps/tutorial/map.xml"));
+        map.getComponent(Map.MapRenderer.class).layer=256;
+        engine.getLevel().addGameObject(map);
     }
     
     public static class PlayerController extends GameComponent {
         public float speed=50;
         private Transform transform;
         private SpriteRenderer spriteRenderer;
+        private BoxCollider collider;
+        
+        private boolean collide;
         
         @Override
         public void start() {
             transform=getGameObject().getComponent(Transform.class);
             spriteRenderer=getGameObject().getComponent(SpriteRenderer.class);
+            collider=this.getGameObject().getComponent(BoxCollider.class);
+            collider.name="playerCollider";
+            collider.setCollisionAdapter(new CollisionAdapter() {
+                @Override
+                public void onCollisionEnter(Collider collider) {
+                    collide=true;
+                }
+                @Override
+                public void onCollisionExit(Collider collider) {
+                    collide=false;
+                }
+                @Override
+                public void onCollision(Collider collider) {
+                }
+            });
         }
         @Override
         public void update(float delta) {
+            collider.setSize(spriteRenderer.sprite.textureRegion.getRegionWidth(),
+                             spriteRenderer.sprite.textureRegion.getRegionHeight());
+            
+            Matrix3 previous=new Matrix3(transform.matrix);
+            
             if(Gdx.input.isKeyPressed(Keys.A)) {transform.matrix.translate(-speed*delta,0);spriteRenderer.flipX=true;}
             else if(Gdx.input.isKeyPressed(Keys.D)) {transform.matrix.translate(speed*delta,0);spriteRenderer.flipX=false;}
             if(Gdx.input.isKeyPressed(Keys.W)) {transform.matrix.translate(0,speed*delta);}
             else if(Gdx.input.isKeyPressed(Keys.S)) {transform.matrix.translate(0,-speed*delta);}
+            
+            float x=spriteRenderer.flipX==false ? 1f : -1f;
+            Array<Collider> objectsHit=collider.cast(new Vector2(x,0),5,2);
+            for(int i=0;i<objectsHit.size;i++)
+                System.out.println(objectsHit.get(i).getGameObject().name);
+            System.out.println("-------------------");
+            if(objectsHit.size>0)transform.matrix.set(previous);
         }
     }
     
@@ -194,6 +232,10 @@ public class ActualGameMode implements GameMode {
                 }
             }
         }
+        
+        GameObject player=engine.getLevel().getGameObjectByName("player");
+        Vector2 pos=player.getComponent(Transform.class).getPosition(new Vector2());
+        engine.camera.position.set(pos.x,pos.y,0);
     }
     @Override
     public void renderGui(OrthographicCamera camera) {

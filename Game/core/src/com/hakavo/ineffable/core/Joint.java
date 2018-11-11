@@ -143,7 +143,7 @@ public class Joint extends GameObject
     @Override
     public Joint getLevel() {
         if(parent==null)return this;
-        return parent.getParent();
+        return parent.getLevel();
     }
     @Override
     public void destroy() {

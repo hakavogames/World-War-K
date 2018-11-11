@@ -1,7 +1,9 @@
 package com.hakavo.ineffable.core.collision;
 import com.hakavo.ineffable.core.Transform;
 import com.badlogic.gdx.math.*;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pools;
+import com.hakavo.ineffable.Engine;
 
 public class BoxCollider extends Collider {
     public Transform transform;
@@ -66,6 +68,26 @@ public class BoxCollider extends Collider {
         
         return false;
     }
+    @Override
+    public Array<Collider> cast(Vector2 direction,float step,int samples) {
+        Array<Collider> coll=new Array<Collider>();
+        BoxCollider box=this.cpy();
+        box.start();
+        
+        for(int i=0;i<samples;i++) {
+            box.x+=direction.x*step;
+            box.y+=direction.y*step;
+            box.update(0);
+            this.getGameObject().getLevel();
+            Array<Collider> tmp=this.getGameObject().getLevel().getComponent(Engine.GameManager.class).testCollision(box);
+            for(Collider collider : tmp) {
+                if(!collider.equals(this)&&!coll.contains(collider,false))
+                    coll.add(collider);
+            }
+        }
+        
+        return coll;
+    }
     
     @Override
     public void start() {
@@ -89,6 +111,8 @@ public class BoxCollider extends Collider {
     public BoxCollider cpy() {
         BoxCollider col=new BoxCollider(this.x,this.y,this.width,this.height);
         col.copyFrom(this);
+        col.start();
+        col.update(0);
         return col;
     }
     

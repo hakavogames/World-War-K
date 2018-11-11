@@ -59,7 +59,7 @@ public class CircleCollider extends Collider {
         return cc;
     }
     @Override
-    protected boolean collides(Collider collider) {
+    public boolean collides(Collider collider) {
         if(collider instanceof BoxCollider)
         {
             BoxCollider box=(BoxCollider)collider;

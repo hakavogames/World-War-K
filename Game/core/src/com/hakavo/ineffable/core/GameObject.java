@@ -126,6 +126,7 @@ public class GameObject implements MessageListener
         components.clear();
     }
     public Joint getLevel() {
+        if(parent==null)return (Joint)this;
         return parent.getLevel();
     }
     public Joint getParent() {

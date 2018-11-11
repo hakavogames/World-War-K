@@ -47,7 +47,7 @@ public class PointCollider extends Collider {
         return pc;
     }
     @Override
-    protected boolean collides(Collider collider) {
+    public boolean collides(Collider collider) {
         if(collider instanceof BoxCollider)
             return ((BoxCollider)collider).contains(getTransformedX(),getTransformedY(),0,0);
         else if(collider instanceof CircleCollider)
