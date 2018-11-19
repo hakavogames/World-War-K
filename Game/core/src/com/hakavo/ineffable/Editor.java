@@ -206,7 +206,7 @@ public class Editor implements GameMode,InputProcessor {
         
         boolean ok=true;
         int x=Gdx.input.getX();
-        int y=900-Gdx.input.getY();
+        int y=Gdx.graphics.getHeight()-Gdx.input.getY();
         for(int i=0;i<stage.getActors().size;i++)
         {
             Actor actor=stage.getActors().get(i);

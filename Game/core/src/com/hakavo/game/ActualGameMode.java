@@ -26,6 +26,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.utils.*;
+import com.hakavo.game.ai.*;
 import com.hakavo.game.mechanics.*;
 import com.hakavo.game.mechanics.DialogueSystem.*;
 import com.hakavo.ineffable.*;
@@ -71,7 +72,7 @@ public class ActualGameMode implements GameMode {
         
         Joint player=new Joint();
         player.name="player";
-        player.addComponent(new Transform(camera.viewportWidth/2,camera.viewportHeight/2));
+        player.addComponent(new Transform(64,24));
         player.addComponent(new SpriteRenderer(sprite));
         player.addComponent(animationController);
         player.addComponent(new BoxCollider());
@@ -89,15 +90,17 @@ public class ActualGameMode implements GameMode {
         guy.getComponent(SpriteRenderer.class).sprite=guySprite;
         guy.getComponent(SpriteRenderer.class).layer=0;
         guy.getComponent(AnimationController.class).setTarget(guySprite);
-        guy.getComponent(AnimationController.class).play("fart");
-        guy.getComponent(Transform.class).matrix.setToTranslation(325,225);
+        guy.getComponent(AnimationController.class).play("idle");
+        guy.getComponent(Transform.class).matrix.translate(75*3,0);
         guy.gameObjects.get(0).getComponent(Transform.class).setRelative(guy.getComponent(Transform.class));
         guy.addComponent(new GameComponent() {
             DialogueSystem dialogue;
             SpriteRenderer spriteRenderer;
             BoxCollider collider;
+            AnimationController animationController;
             boolean busy=false,collide;
             public void start() {
+                animationController=this.getGameObject().getComponent(AnimationController.class);
                 collider=this.getGameObject().getComponent(BoxCollider.class);
                 collider.name="guyCollider";
                 spriteRenderer=this.getGameObject().getComponent(SpriteRenderer.class);
@@ -118,6 +121,52 @@ public class ActualGameMode implements GameMode {
                     }
                 };
                 
+                AgentController agent=new AgentController();
+                
+                this.getGameObject().addComponent(agent);
+                Task walk=new Task() {
+                    private Transform transform;
+                    private SpriteRenderer spriteRenderer;
+                    private float dist;
+                    boolean goRight=true;
+
+                    public float maxDist=75;
+                    public float speed=40;
+
+                    @Override
+                    public void onTaskAssigned() {
+                        transform=parent.getGameObject().getComponent(Transform.class);
+                        spriteRenderer=parent.getGameObject().getComponent(SpriteRenderer.class);
+                    }
+                    @Override
+                    public void onTaskPerform(float delta) {
+                        if(goRight==true)spriteRenderer.flipX=false;
+                        else spriteRenderer.flipX=true;
+
+                        float speed=goRight ? delta*this.speed : -delta*this.speed;
+                        dist+=Math.abs(speed);
+                        transform.matrix.translate(speed,0);
+
+                        if(goRight&&dist>=maxDist) {
+                            goRight=false;
+                            dist=0;
+                            setDelay(1f);
+                        }
+                        else if(!goRight&&dist>=maxDist) {
+                            goRight=true;
+                            dist=0;
+                            setDelay(1f);
+                        }
+                    }
+                    @Override
+                    public void onTaskCompleted() {
+                    }
+                    @Override
+                    public void onTaskReset() {
+                    }
+                };
+                agent.assignTask(walk);
+                
                 Dialogue question=new Dialogue("question","Can you help me?",2.5f);
                 question.choices.add(new Choice("Give Tomato Soup","thanks"));
                 question.choices.add(new Choice("Do nothing","die"));
@@ -125,7 +174,13 @@ public class ActualGameMode implements GameMode {
                 greeting.choices.add(new Choice("","greeting2"));
                 Dialogue greeting2=new Dialogue("greeting2","I feel I will die if I won't eat anything",3f);
                 greeting2.choices.add(new Choice("","question"));
-                dialogue.dialogues.addAll(greeting,question,greeting2,new Dialogue("thanks","You saved my life, I won't forget that!",3f),
+                Dialogue thanks=new Dialogue("thanks","You saved my life, I won't forget that!",3f) {
+                    @Override
+                    public void onDialogueComplete() {
+                        animationController.play("fart");
+                    }
+                };
+                dialogue.dialogues.addAll(greeting,question,greeting2,thanks,
                                        new Dialogue("die","*drops dead on the floor*",2f));
                 
                 ((Joint)this.getGameObject()).gameObjects.get(0).addComponent(dialogue);
@@ -141,6 +196,7 @@ public class ActualGameMode implements GameMode {
         engine.getLevel().addGameObject(guy);
         
         Map map=new Map(new Tileset(Gdx.files.internal("tilesets/wwii/tileset.xml")),Gdx.files.internal("maps/tutorial/map.xml"));
+        map.getComponent(Transform.class).matrix.scale(1.6f,1.6f);
         map.getComponent(Map.MapRenderer.class).layer=256;
         engine.getLevel().addGameObject(map);
     }
@@ -151,27 +207,12 @@ public class ActualGameMode implements GameMode {
         private SpriteRenderer spriteRenderer;
         private BoxCollider collider;
         
-        private boolean collide;
-        
         @Override
         public void start() {
             transform=getGameObject().getComponent(Transform.class);
             spriteRenderer=getGameObject().getComponent(SpriteRenderer.class);
             collider=this.getGameObject().getComponent(BoxCollider.class);
             collider.name="playerCollider";
-            collider.setCollisionAdapter(new CollisionAdapter() {
-                @Override
-                public void onCollisionEnter(Collider collider) {
-                    collide=true;
-                }
-                @Override
-                public void onCollisionExit(Collider collider) {
-                    collide=false;
-                }
-                @Override
-                public void onCollision(Collider collider) {
-                }
-            });
         }
         @Override
         public void update(float delta) {
@@ -180,16 +221,14 @@ public class ActualGameMode implements GameMode {
             
             Matrix3 previous=new Matrix3(transform.matrix);
             
-            if(Gdx.input.isKeyPressed(Keys.A)) {transform.matrix.translate(-speed*delta,0);spriteRenderer.flipX=true;}
-            else if(Gdx.input.isKeyPressed(Keys.D)) {transform.matrix.translate(speed*delta,0);spriteRenderer.flipX=false;}
-            if(Gdx.input.isKeyPressed(Keys.W)) {transform.matrix.translate(0,speed*delta);}
-            else if(Gdx.input.isKeyPressed(Keys.S)) {transform.matrix.translate(0,-speed*delta);}
+            float x=0,y=0;
             
-            float x=spriteRenderer.flipX==false ? 1f : -1f;
-            Array<Collider> objectsHit=collider.cast(new Vector2(x,0),5,2);
-            for(int i=0;i<objectsHit.size;i++)
-                System.out.println(objectsHit.get(i).getGameObject().name);
-            System.out.println("-------------------");
+            if(Gdx.input.isKeyPressed(Keys.A)) {transform.matrix.translate(-speed*delta,0);spriteRenderer.flipX=true;x=-1;}
+            else if(Gdx.input.isKeyPressed(Keys.D)) {transform.matrix.translate(speed*delta,0);spriteRenderer.flipX=false;x=1;}
+            if(Gdx.input.isKeyPressed(Keys.W)) {transform.matrix.translate(0,speed*delta);y=1;}
+            else if(Gdx.input.isKeyPressed(Keys.S)) {transform.matrix.translate(0,-speed*delta);y=-1;}
+            
+            Array<Collider> objectsHit=collider.cast(new Vector2(x,y),1,1);
             if(objectsHit.size>0)transform.matrix.set(previous);
         }
     }

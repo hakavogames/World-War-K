@@ -145,19 +145,31 @@ public class Map extends GameObject {
         @Override
         public boolean collides(Collider collider) {
             if(collider instanceof BoxCollider) {
+                Vector2 scale=super.getGameObject().getComponent(Transform.class).getScale(Pools.obtain(Vector2.class));
+                
                 BoxCollider coll=(BoxCollider)collider;
                 int size=map.tileset.tilesize;
-                BoxCollider test=new BoxCollider((int)(coll.getTransformedX()/size),(int)((coll.getTransformedY()+12f)/size),size,size);
+                BoxCollider test=new BoxCollider((coll.getTransformedX()/size/scale.x),(coll.getTransformedY()/size/scale.y),
+                                                 size,size);
                 test.setGameObject(map);
                 test.tags.addAll(this.tags);
                 test.start();
                 test.update(0);
                 
-                if(test.x<0||test.y<0||test.x>getWidth()||test.y>getHeight())return false;
-                if(walls[(int)test.x][(int)test.y]==true)
+                float tx=test.x,ty=test.y;
+                float tw=coll.getTransformedWidth()/scale.x/size,th=coll.getTransformedHeight()/scale.y/size;
+                if(checkWall((int)tx,(int)ty)||
+                   checkWall((int)(tx+tw),(int)ty)||
+                   checkWall((int)(tx+tw),(int)(ty+th))||
+                   checkWall((int)tx,(int)(ty+th)))
                     return true;
+                
+                Pools.free(scale);
             }
             return false;
+        }
+        private boolean checkWall(int x,int y) {
+            return x<0||y<0||x>getWidth()||y>getWidth() ? false : walls[x][y];
         }
 
         @Override
@@ -179,13 +191,14 @@ public class Map extends GameObject {
             Matrix4 matrix4=Pools.obtain(Matrix4.class).set(matrix);
             sb.setTransformMatrix(matrix4);
             sb.setColor(1,1,1,1);
+            Vector2 scale=matrix.getScale(Pools.obtain(Vector2.class));
 
             float viewportWidth=cam.viewportWidth*cam.zoom;
             float viewportHeight=cam.viewportHeight*cam.zoom;
-            int minx=(int)(cam.position.x/tileset.tilesize-viewportWidth/2/tileset.tilesize);
-            int maxx=(int)(cam.position.x/tileset.tilesize+viewportWidth/2/tileset.tilesize);
-            int miny=(int)(cam.position.y/tileset.tilesize-viewportHeight/2/tileset.tilesize-1);
-            int maxy=(int)(cam.position.y/tileset.tilesize+viewportHeight/2/tileset.tilesize);
+            int minx=(int)(cam.position.x/tileset.tilesize/scale.x-viewportWidth/2/tileset.tilesize/scale.x);
+            int maxx=(int)(cam.position.x/tileset.tilesize/scale.x+viewportWidth/2/tileset.tilesize/scale.x);
+            int miny=(int)(cam.position.y/tileset.tilesize/scale.y-viewportHeight/2/tileset.tilesize/scale.y-1);
+            int maxy=(int)(cam.position.y/tileset.tilesize/scale.y+viewportHeight/2/tileset.tilesize/scale.y);
 
             minx=Math.max(0,minx-1);
             maxx=Math.min(maxx+1,map.getWidth());
@@ -203,6 +216,7 @@ public class Map extends GameObject {
                                     tileset.tilesize,tileset.tilesize);
                         }
             }
+            Pools.free(scale);
             Pools.free(matrix);
             Pools.free(matrix4);
         }

@@ -61,4 +61,8 @@
 		<name>roof</name>
 		<collide>true</collide>
 	</tile>
+	<tile x="6" y="0">
+		<name>grass</name>
+		<collide>false</collide>
+	</tile>
 </tileset>
